@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#245c48">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Gestion-heure">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>Gestion-heure</title>
+<style>
+:root{--green:#245c48;--green2:#dcebe3;--ink:#1e2b25;--muted:#66736b;--line:#dce3de;--bg:#f4f7f5;--white:#fff;--red:#a53636}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
+header{background:var(--green);color:#fff;padding:22px 16px 18px}header h1{font-size:25px;margin:0 0 5px}header p{margin:0;font-size:13px;opacity:.9}
+nav{display:flex;gap:7px;padding:10px;background:#fff;position:sticky;top:0;z-index:5;border-bottom:1px solid var(--line);overflow:auto}
+nav button{border:0;background:#eef3ef;color:var(--ink);border-radius:10px;padding:10px 12px;white-space:nowrap;font-weight:650}
+nav button.active{background:var(--green);color:white}
+main{max-width:760px;margin:auto;padding:14px}
+.panel{display:none}.panel.active{display:block}
+.card{background:white;border:1px solid var(--line);border-radius:15px;padding:15px;margin-bottom:13px;box-shadow:0 2px 8px #193c2710}
+h2{font-size:19px;margin:0 0 13px}h3{font-size:15px;margin:0 0 10px}
+label{display:block;font-size:13px;font-weight:650;margin:10px 0 5px}
+input,select,textarea{width:100%;min-height:43px;border:1px solid #cbd6ce;border-radius:9px;background:#fff;padding:10px;font:inherit;color:var(--ink)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.grid .full{grid-column:1/-1}
+button.primary,.primary{background:var(--green);color:#fff;border:0;border-radius:10px;padding:12px 14px;font:inherit;font-weight:700;width:100%;margin-top:12px}
+button.secondary{background:var(--green2);color:var(--green);border:0;border-radius:9px;padding:9px 11px;font-weight:700}
+button.danger{background:#f9e8e8;color:var(--red);border:0;border-radius:9px;padding:8px 10px;font-weight:700}
+.rowitem{padding:12px 0;border-top:1px solid var(--line)}.rowitem:first-child{border-top:0}
+.rowtop{display:flex;justify-content:space-between;gap:8px;align-items:flex-start}.muted{color:var(--muted);font-size:13px}.amount{font-weight:750}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:9px}.stat{background:#f4f8f5;border-radius:11px;padding:12px}.stat small{display:block;color:var(--muted);font-size:12px;margin-bottom:4px}.stat strong{font-size:19px;overflow-wrap:anywhere}
+.notice{background:#fff8df;border:1px solid #efdf9e;border-radius:10px;padding:11px;font-size:13px;line-height:1.45;margin-bottom:12px}
+.empty{padding:15px 0;color:var(--muted);font-size:14px}
+.actions{display:flex;gap:7px;flex-wrap:wrap;margin-top:9px}.actions button{width:auto;margin:0}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:8px 18px 20px}
+#printReport{display:none}
+@media print{
+ body{background:#fff;padding:0;color:#111}
+ body>*{display:none!important}
+ #printReport{display:block!important;padding:0;margin:0;font-family:Arial,sans-serif;color:#111}
+ #printReport h1{font-size:22px;margin:0 0 6px}
+ #printReport p{margin:4px 0 12px}
+ #printReport table{width:100%;border-collapse:collapse;font-size:12px}
+ #printReport th,#printReport td{border:1px solid #777;padding:6px;text-align:left;vertical-align:top}
+ #printReport th{background:#eee}
+ #printReport .print-total{font-size:16px;font-weight:bold;margin-top:14px}
+ @page{size:auto;margin:14mm}
+}
+@media(min-width:600px){.stats{grid-template-columns:repeat(4,1fr)}}
+</style>
+</head>
+<body>
+<header><h1>Gestion-heure</h1><p>Suivi des prestations, des heures et des montants à facturer</p></header>
+<nav aria-label="Navigation">
+<button class="active" data-tab="saisie">Saisie</button><button data-tab="prestations">Prestations</button><button data-tab="clients">Clients</button><button data-tab="bilans">Bilans</button><button data-tab="donnees">Sauvegarde</button>
+</nav>
+<main>
+<section id="saisie" class="panel active">
+<div class="card"><h2>Nouvelle prestation</h2>
+<form id="entryForm">
+<div class="grid">
+<div><label for="entryDate">Date</label><input id="entryDate" type="date" required></div>
+<div><label for="entryClient">Client</label><select id="entryClient" required></select></div>
+<div><label for="entryType">Type de prestation</label><select id="entryType"><option value="hourly">À l'heure</option><option value="fixed">Forfait HT</option></select></div>
+<div><label for="entryVat">TVA (%)</label><input id="entryVat" type="number" min="0" max="100" step="0.1" value="20" required></div>
+<div id="startWrap"><label for="entryStart">Heure de début</label><input id="entryStart" type="time" value="08:00"></div>
+<div id="endWrap"><label for="entryEnd">Heure de fin</label><input id="entryEnd" type="time" value="12:00"></div>
+<div id="breakWrap"><label for="entryBreak">Pause (minutes)</label><input id="entryBreak" type="number" min="0" step="1" value="0"></div>
+<div id="rateWrap"><label for="entryRate">Tarif horaire HT (€)</label><input id="entryRate" type="number" min="0" step="0.01" required></div>
+<div id="fixedWrap" class="full" hidden><label for="entryFixed">Montant forfait HT (€)</label><input id="entryFixed" type="number" min="0" step="0.01"></div>
+<div class="full"><label for="entryNote">Note (facultatif)</label><input id="entryNote" type="text" maxlength="180" placeholder="Ex. taille, service du soir…"></div>
+</div>
+<div id="entryPreview" class="notice" style="margin-top:13px">Sélectionne un client pour afficher le calcul estimé.</div>
+<button class="primary" type="submit">Enregistrer la prestation</button>
+</form></div>
+<div class="card"><h3>Provision MSA estimée</h3><p class="muted">Le taux est modifiable dans l’onglet Bilans. Cette valeur est une estimation de suivi, pas un calcul officiel de cotisations.</p></div>
+</section>
+
+<section id="prestations" class="panel"><div class="card"><h2>Prestations enregistrées</h2>
+<div class="grid"><div><label for="listMonth">Mois</label><input id="listMonth" type="month"></div><div><label for="listClient">Client</label><select id="listClient"><option value="">Tous les clients</option></select></div></div>
+<div class="actions"><button id="printClientBtn" class="primary" type="button">Imprimer les horaires du client (PDF)</button></div><p class="muted">Choisis un mois et un client ci-dessus. Dans la fenêtre d’impression de l’iPhone, tu peux enregistrer le relevé en PDF.</p><div id="entryList"></div></div></section>
+
+<section id="clients" class="panel">
+<div class="card"><h2>Ajouter un client</h2>
+<form id="clientForm"><div class="grid">
+<div class="full"><label for="clientName">Nom du client</label><input id="clientName" required maxlength="100" placeholder="Nom ou entreprise"></div>
+<div><label for="clientCategory">Activité</label><select id="clientCategory"><option>Agriculture</option><option>Restauration</option><option>Autre</option></select></div>
+<div><label for="clientRate">Tarif horaire HT (€)</label><input id="clientRate" type="number" min="0" step="0.01" value="20" required></div>
+<div><label for="clientVat">TVA (%)</label><input id="clientVat" type="number" min="0" max="100" step="0.1" value="20" required></div>
+</div><button class="primary" type="submit">Ajouter le client</button></form></div>
+<div class="card"><h2>Mes clients</h2><div id="clientList"></div></div>
+</section>
+
+<section id="bilans" class="panel">
+<div class="card"><h2>Bilans</h2><div class="grid">
+<div><label for="reportPeriod">Période</label><select id="reportPeriod"><option value="month">Mensuelle</option><option value="year">Annuelle</option></select></div>
+<div><label for="reportDate">Mois / année</label><input id="reportDate" type="month"></div>
+<div><label for="msaRate">Provision MSA (%)</label><input id="msaRate" type="number" min="0" max="100" step="0.1" value="25"></div>
+</div><div id="reportSummary" style="margin-top:14px"></div></div>
+<div class="card"><h2>Détail par client</h2><div id="reportClients"></div></div>
+<div class="notice">Les montants affichés sont des montants à facturer, sans suivi des paiements. Vérifie le régime de TVA et les règles applicables à ton activité avec ton comptable ou les organismes compétents.</div>
+</section>
+
+<section id="donnees" class="panel">
+<div class="card"><h2>Sauvegarder mes données</h2><p class="muted">Télécharge un fichier de sauvegarde contenant les clients, prestations et réglages. Garde-le dans Fichiers ou dans un emplacement sûr.</p><button id="exportBtn" class="primary">Télécharger une sauvegarde</button></div>
+<div class="card"><h2>Restaurer une sauvegarde</h2><p class="muted">Choisis un fichier JSON précédemment exporté. La restauration remplace les données actuellement présentes sur cet appareil.</p><label for="importFile">Fichier de sauvegarde (.json)</label><input id="importFile" type="file" accept=".json,application/json"><button id="importBtn" class="primary">Restaurer cette sauvegarde</button></div>
+<div class="card"><h2>Conseils</h2><p class="muted">Les données sont enregistrées dans le stockage local de ce navigateur. Elles ne se synchronisent pas automatiquement avec un autre appareil. Fais régulièrement une sauvegarde.</p></div>
+</section>
+</main>
+<div id="printReport"></div>
+<footer>Gestion-heure · Outil de suivi personnel</footer>
+<script>
+const KEY='gestionHeureData_v1';
+let data={clients:[],entries:[],msaRate:25};
+const $=id=>document.getElementById(id);
+const money=n=>new Intl.NumberFormat('fr-FR',{style:'currency',currency:'EUR'}).format(Number(n)||0);
+const num=n=>Number(n)||0;
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const today=()=>{let d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+const monthNow=()=>today().slice(0,7);
+function save(){localStorage.setItem(KEY,JSON.stringify(data));renderAll()}
+function load(){try{const d=JSON.parse(localStorage.getItem(KEY)||'null');if(d&&Array.isArray(d.clients)&&Array.isArray(d.entries))data={clients:d.clients,entries:d.entries,msaRate:Number.isFinite(+d.msaRate)?+d.msaRate:25}}catch(e){}}
+function client(id){return data.clients.find(c=>c.id===id)}
+function hoursFor(e){if(e.type!=='hourly')return 0;let [sh,sm]=(e.start||'00:00').split(':').map(Number),[eh,em]=(e.end||'00:00').split(':').map(Number);let mins=eh*60+em-(sh*60+sm)-num(e.pause);if(mins<0)mins+=1440;return Math.max(0,mins/60)}
+function totals(entries){let hours=0,ht=0,vat=0;for(const e of entries){let h=hoursFor(e),base=e.type==='fixed'?num(e.fixed):h*num(e.rate);hours+=h;ht+=base;vat+=base*num(e.vat)/100}let msa=ht*num(data.msaRate)/100;return {hours,ht,vat,ttc:ht+vat,msa,revenue:ht-msa}}
+function entryLabel(e){const c=client(e.clientId);return `${c?c.name:'Client supprimé'} · ${e.date}`}
+function renderClients(){let options='<option value="">Tous les clients</option>';let select='';for(const c of data.clients){options+=`<option value="${esc(c.id)}">${esc(c.name)}</option>`;select+=`<option value="${esc(c.id)}">${esc(c.name)}</option>`} $('entryClient').innerHTML=select||'<option value="">Ajoute d’abord un client</option>';$('listClient').innerHTML=options;
+$('clientList').innerHTML=data.clients.length?data.clients.map(c=>`<div class="rowitem"><div class="rowtop"><div><strong>${esc(c.name)}</strong><div class="muted">${esc(c.category)} · ${money(c.rate)}/h HT · TVA ${num(c.vat)}%</div></div><button class="danger" data-del-client="${c.id}">Supprimer</button></div><div class="actions"><button class="secondary" data-edit-client="${c.id}">Modifier</button></div></div>`).join(''):'<div class="empty">Aucun client pour le moment.</div>';
+}
+function renderEntries(){let month=$('listMonth').value, cid=$('listClient').value;let arr=data.entries.filter(e=>(!month||e.date.startsWith(month))&&(!cid||e.clientId===cid)).sort((a,b)=>(b.date+b.createdAt).localeCompare(a.date+a.createdAt));
+$('entryList').innerHTML=arr.length?arr.map(e=>{let t=totals([e]),c=client(e.clientId);return `<div class="rowitem"><div class="rowtop"><div><strong>${esc(c?.name||'Client supprimé')}</strong><div class="muted">${esc(e.date)} · ${e.type==='fixed'?'Forfait':`${hoursFor(e).toLocaleString('fr-FR',{maximumFractionDigits:2})} h`}</div>${e.note?`<div class="muted">${esc(e.note)}</div>`:''}<div class="muted">HT ${money(t.ht)} · TVA ${money(t.vat)} · TTC ${money(t.ttc)}</div></div><button class="danger" data-del-entry="${e.id}">Supprimer</button></div><div class="actions"><button class="secondary" data-edit-entry="${e.id}">Modifier</button></div></div>`}).join(''):'<div class="empty">Aucune prestation pour cette période.</div>'}
+function filteredEntries(period,date){return data.entries.filter(e=>period==='year'?e.date.startsWith(date.slice(0,4)):e.date.startsWith(date.slice(0,7)))}
+function renderReports(){data.msaRate=num($('msaRate').value);let period=$('reportPeriod').value,date=$('reportDate').value||monthNow();let es=filteredEntries(period,date),t=totals(es);
+$('reportSummary').innerHTML=`<div class="stats"><div class="stat"><small>Heures (hors forfaits)</small><strong>${t.hours.toLocaleString('fr-FR',{maximumFractionDigits:2})} h</strong></div><div class="stat"><small>Total HT</small><strong>${money(t.ht)}</strong></div><div class="stat"><small>TVA</small><strong>${money(t.vat)}</strong></div><div class="stat"><small>Total TTC</small><strong>${money(t.ttc)}</strong></div><div class="stat"><small>Provision MSA (${num(data.msaRate)}%)</small><strong>${money(t.msa)}</strong></div><div class="stat"><small>Revenu (HT − MSA)</small><strong>${money(t.revenue)}</strong></div></div>`;
+$('reportClients').innerHTML=data.clients.length?data.clients.map(c=>{let ct=totals(es.filter(e=>e.clientId===c.id));return `<div class="rowitem"><strong>${esc(c.name)}</strong><div class="muted">${esc(c.category)}</div><div class="muted">${ct.hours.toLocaleString('fr-FR',{maximumFractionDigits:2})} h · HT ${money(ct.ht)} · TVA ${money(ct.vat)} · TTC ${money(ct.ttc)}</div><div class="muted">Provision MSA estimée : ${money(ct.msa)} · <strong>Revenu : ${money(ct.revenue)}</strong></div></div>`}).join(''):'<div class="empty">Ajoute un client pour voir le détail.</div>'}
+function renderAll(){renderClients();renderEntries();renderReports();updatePreview()}
+function updatePreview(){let c=client($('entryClient').value);if(c){if(!$('entryRate').dataset.touched)$('entryRate').value=c.rate;if(!$('entryVat').dataset.touched)$('entryVat').value=c.vat}
+let type=$('entryType').value;$('startWrap').hidden=$('endWrap').hidden=$('breakWrap').hidden=$('rateWrap').hidden=type==='fixed';$('fixedWrap').hidden=type!=='fixed';
+let h=type==='hourly'?Math.max(0,(()=>{let a=$('entryStart').value.split(':').map(Number),b=$('entryEnd').value.split(':').map(Number);let m=b[0]*60+b[1]-a[0]*60-a[1]-num($('entryBreak').value);if(m<0)m+=1440;return m/60})()):0;
+let ht=type==='fixed'?num($('entryFixed').value):h*num($('entryRate').value),v=ht*num($('entryVat').value)/100;
+$('entryPreview').innerHTML=type==='fixed'?`Forfait : <strong>${money(ht)} HT</strong> · TVA ${money(v)} · <strong>${money(ht+v)} TTC</strong><br><span class="muted">Ce forfait ne sera pas ajouté au total des heures.</span>`:`Durée estimée : <strong>${h.toLocaleString('fr-FR',{maximumFractionDigits:2})} h</strong><br>Montant : <strong>${money(ht)} HT</strong> · TVA ${money(v)} · <strong>${money(ht+v)} TTC</strong>`}
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('active',x===b));document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===b.dataset.tab));renderAll()}));
+$('entryDate').value=today();$('listMonth').value=monthNow();$('reportDate').value=monthNow();
+$('entryClient').addEventListener('change',()=>{$('entryRate').dataset.touched='';$('entryVat').dataset.touched='';updatePreview()});
+$('entryRate').addEventListener('input',()=>{$('entryRate').dataset.touched='1';updatePreview()});$('entryVat').addEventListener('input',()=>{$('entryVat').dataset.touched='1';updatePreview()});
+['entryType','entryStart','entryEnd','entryBreak','entryFixed','entryRate','entryVat'].forEach(id=>$(id).addEventListener('input',updatePreview));
+$('clientForm').addEventListener('submit',e=>{e.preventDefault();data.clients.push({id:crypto.randomUUID(),name:$('clientName').value.trim(),category:$('clientCategory').value,rate:num($('clientRate').value),vat:num($('clientVat').value)});e.target.reset();$('clientRate').value=20;$('clientVat').value=20;save();alert('Client ajouté.')});
+$('entryForm').addEventListener('submit',e=>{e.preventDefault();let type=$('entryType').value;if(!$('entryClient').value){alert('Ajoute d’abord un client.');return}if(type==='hourly'&&num($('entryRate').value)<0)return;let item={id:crypto.randomUUID(),clientId:$('entryClient').value,date:$('entryDate').value,type,vat:num($('entryVat').value),note:$('entryNote').value.trim(),createdAt:Date.now()};if(type==='fixed'){if($('entryFixed').value===''||num($('entryFixed').value)<0){alert('Indique le montant du forfait.');return}item.fixed=num($('entryFixed').value)}else{item.start=$('entryStart').value;item.end=$('entryEnd').value;item.pause=num($('entryBreak').value);item.rate=num($('entryRate').value)}data.entries.push(item);$('entryNote').value='';save();alert('Prestation enregistrée.')});
+$('listMonth').addEventListener('change',renderEntries);$('listClient').addEventListener('change',renderEntries);$('reportPeriod').addEventListener('change',renderReports);$('reportDate').addEventListener('change',renderReports);$('msaRate').addEventListener('change',()=>{data.msaRate=Math.max(0,Math.min(100,num($('msaRate').value)));save()});
+document.addEventListener('click',e=>{let dc=e.target.dataset.delClient;if(dc){if(confirm('Supprimer ce client ? Les prestations déjà saisies seront conservées.')){data.clients=data.clients.filter(c=>c.id!==dc);save()}}
+let de=e.target.dataset.delEntry;if(de){if(confirm('Supprimer cette prestation ?')){data.entries=data.entries.filter(x=>x.id!==de);save()}}
+let ec=e.target.dataset.editClient;if(ec){let c=client(ec);if(!c)return;let name=prompt('Nom du client',c.name);if(name===null)return;let rate=prompt('Tarif horaire HT (€)',c.rate);if(rate===null)return;let vat=prompt('TVA (%)',c.vat);if(vat===null)return;let category=prompt('Activité : Agriculture, Restauration ou Autre',c.category);if(category===null)return;c.name=name.trim()||c.name;c.rate=Math.max(0,num(rate));c.vat=Math.max(0,Math.min(100,num(vat)));c.category=['Agriculture','Restauration','Autre'].includes(category)?category:c.category;save()}
+let ee=e.target.dataset.editEntry;if(ee){let x=data.entries.find(x=>x.id===ee);if(!x)return;let date=prompt('Date (AAAA-MM-JJ)',x.date);if(date===null)return;let note=prompt('Note',x.note||'');if(note===null)return;let vat=prompt('TVA (%)',x.vat);if(vat===null)return;x.date=date;x.note=note;x.vat=Math.max(0,Math.min(100,num(vat)));if(x.type==='fixed'){let amount=prompt('Forfait HT (€)',x.fixed);if(amount===null)return;x.fixed=Math.max(0,num(amount))}else{let start=prompt('Heure de début (HH:MM)',x.start);if(start===null)return;let end=prompt('Heure de fin (HH:MM)',x.end);if(end===null)return;let pause=prompt('Pause en minutes',x.pause);if(pause===null)return;let rate=prompt('Tarif horaire HT (€)',x.rate);if(rate===null)return;x.start=start;x.end=end;x.pause=Math.max(0,num(pause));x.rate=Math.max(0,num(rate))}save()}
+});
+$('exportBtn').addEventListener('click',()=>{let blob=new Blob([JSON.stringify({...data,backupVersion:1,exportedAt:new Date().toISOString()},null,2)],{type:'application/json'});let url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`gestion-heure-sauvegarde-${today()}.json`;document.body.appendChild(a);a.click();a.remove();URL.revokeObjectURL(url)});
+$('importBtn').addEventListener('click',async()=>{let f=$('importFile').files[0];if(!f){alert('Choisis d’abord un fichier de sauvegarde.');return}if(!confirm('La restauration remplacera les données actuelles. Continuer ?'))return;try{let d=JSON.parse(await f.text());if(!Array.isArray(d.clients)||!Array.isArray(d.entries))throw new Error('Format invalide');data={clients:d.clients,entries:d.entries,msaRate:Number.isFinite(+d.msaRate)?+d.msaRate:25};save();alert('Sauvegarde restaurée.')}catch(err){alert('Impossible de lire ce fichier de sauvegarde.')}});
+
+$('printClientBtn').addEventListener('click',()=>{
+ const month=$('listMonth').value,cid=$('listClient').value;
+ if(!month){alert('Choisis un mois.');return}
+ if(!cid){alert('Choisis un client dans le filtre Client.');return}
+ const c=client(cid);if(!c){alert('Client introuvable.');return}
+ const entries=data.entries.filter(e=>e.clientId===cid&&e.date.startsWith(month)&&e.type==='hourly').sort((a,b)=>(a.date+(a.start||'')).localeCompare(b.date+(b.start||'')));
+ if(!entries.length){alert('Aucune prestation horaire pour ce client sur ce mois.');return}
+ const total=totals(entries).hours;
+ const fmtHours=h=>h.toLocaleString('fr-FR',{maximumFractionDigits:2});
+ const fmtDate=d=>{const a=d.split('-');return a.length===3?a[2]+'/'+a[1]+'/'+a[0]:d};
+ const rows=entries.map(e=>'<tr><td>'+esc(fmtDate(e.date))+'</td><td>'+esc(e.start||'—')+'</td><td>'+esc(e.end||'—')+'</td><td>'+num(e.pause)+' min</td><td>'+fmtHours(hoursFor(e))+' h</td><td>'+esc(e.note||'')+'</td></tr>').join('');
+ const parts=month.split('-');
+ $('printReport').innerHTML='<h1>Relevé mensuel des horaires</h1><p><strong>Client :</strong> '+esc(c.name)+'<br><strong>Activité :</strong> '+esc(c.category)+'<br><strong>Mois :</strong> '+parts[1]+'/'+parts[0]+'</p><table><thead><tr><th>Date</th><th>Début</th><th>Fin</th><th>Pause</th><th>Durée</th><th>Notes</th></tr></thead><tbody>'+rows+'</tbody></table><p class="print-total">Total des heures du mois : '+fmtHours(total)+' h</p><p style="font-size:10px;color:#555">Les forfaits ne sont pas inclus dans le total des heures.</p>';
+ window.print();
+});
+
+load();$('msaRate').value=data.msaRate;renderAll();
+if('serviceWorker' in navigator && location.protocol.startsWith('http'))window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+</script>
+</body></html>
